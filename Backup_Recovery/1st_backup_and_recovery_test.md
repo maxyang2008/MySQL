@@ -75,8 +75,8 @@ bash /mysql_backup/scripts/inc_back.sh  # 2nd time inc backup
 ```
 and check the logfile to ensure backup run successfully
 
-# inc backup restore
-## full backup restore
+## inc backup restore
+### full backup restore
 ```sh
 mkdir -p /mysql_backup/full_backup/restore/full
 cd /mysql_backup/full_backup/restore/full
@@ -85,7 +85,7 @@ tar -zxvf /mysql_backup/full_backup/20181119_190949.tar.gz
 innobackupex --apply-log --redo-only /mysql_backup/full_backup/restore/full
 ```
 
-## 1st inc backup restore
+### 1st inc backup restore
 ```sh
 mkdir -p /mysql_backup/incr_backup/restore/inc/1
 cd /mysql_backup/incr_backup/restore/inc/1
@@ -95,7 +95,7 @@ gunzip -c /mysql_backup/incr_backup/20181119_191045.tar.gz | xbstream -x -
 innobackupex --apply-log --redo-only /mysql_backup/full_backup/restore/full --incremental-dir=/mysql_backup/incr_backup/restore/inc/1
 ```
 
-## 2nd inc backup restore
+### 2nd inc backup restore
 ```sh
 mkdir -p /mysql_backup/incr_backup/restore/inc/2
 cd /mysql_backup/incr_backup/restore/inc/2
@@ -104,13 +104,13 @@ gunzip -c /mysql_backup/incr_backup/20181119_191115.tar.gz | xbstream -x -
 innobackupex --apply-log /mysql_backup/full_backup/restore/full --incremental-dir=/mysql_backup/incr_backup/restore/inc/2 
 ```
 
-## copy back 
+### copy back 
 ```sh
 innobackupex --defaults-file=/etc/my.cnf --copy-back --rsync /mysql_backup/full_backup/restore/full
 chown -R mysql.mysql /data/mydb
 ```
 
-## startup database
+### startup database
 /启动数据库
 /etc/init.d/mysqld start
 
@@ -120,6 +120,6 @@ FLUSH TABLES WITH READ LOCK;
 SET GLOBAL read_only = 1;
 ```
 
-#### reference
+### reference
 for recovery:
 https://www.cnblogs.com/waynechou/p/xtrabackup_backup.html#_label1
