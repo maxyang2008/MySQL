@@ -68,6 +68,7 @@ innobackupex \
 ```
 
 * note
+
 If you are using --stream options when making a backup, you should first manually extract gzipped file to tmp directory using using the following command:
 (choose xbstream or tar command based on which stream type you used when doing backup)
 ```
