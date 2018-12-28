@@ -1,0 +1,107 @@
+#!/bin/bash
+MYSQL_USER=root 
+
+MYSQL_PWD=w1VEhQxj
+
+MYSQL_HOST=`ifconfig eth0|awk "NR==2"|awk -F ":" '{print $2}'|sed 's#Bc.*$##g'`
+
+MYSQL_PORT='3306'
+
+MYSQL_CONN="mysqladmin  -u${MYSQL_USER} -p${MYSQL_PWD} -h${MYSQL_HOST} -P${MYSQL_PORT}"  2> /dev/null
+MYSQL_CONN2="mysql  -u${MYSQL_USER} -p${MYSQL_PWD} -h${MYSQL_HOST} -P${MYSQL_PORT}"  2> /dev/null
+
+if [ $# -ne "1" ];then
+    echo "arg error!"
+fi
+
+case $1 in
+#服务状态
+    ping) 
+        result=`${MYSQL_CONN} ping 2> /dev/null` 
+        echo $result 
+        ;; 	
+#当前连接数		
+	Threads_connected)
+        result=`${MYSQL_CONN}  2> /dev/null extended-status |grep -w "Threads_connected"|cut -d"|" -f3`
+        echo $result
+        ;;
+#当前执行的线程
+	Threads_running)
+        result=`${MYSQL_CONN}  2> /dev/null extended-status |grep -w "Threads_running"|cut -d"|" -f3`
+        echo $result
+        ;;
+#主从延迟
+	Seconds_Behind_Master)
+        result=`${MYSQL_CONN2} -e 2>/dev/null "show slave status\G"| grep Seconds_Behind_Master|cut -d ":" -f2`
+        echo $result
+        ;;		
+#主从同步状态
+	Slave_IO_Running)
+        result=`${MYSQL_CONN2} -e 2> /dev/null "show slave status\G" |grep Slave_IO_Running |cut -d ":" -f2`
+        echo $result
+        ;;
+	Slave_SQL_Running)
+        result=`${MYSQL_CONN2} -e 2> /dev/null "show slave status\G" |grep Slave_SQL_Running |head -n 1|cut -d ":" -f2`
+        echo $result
+        ;;
+#最大连接数
+    max_connections)
+        result=`${MYSQL_CONN2} -e 2> /dev/null "show variables like '%max_connections%'" |tail -n 1|cut -f2`
+        echo $result
+        ;;
+#锁监控
+    lock)
+        result=`${MYSQL_CONN2} -e 2> /dev/null "SELECT
+            lw.requesting_trx_id AS request_ID,
+         trx.trx_mysql_thread_id as request_mysql_ID,
+            trx.trx_query AS request_command,
+            lw.blocking_trx_id AS blocking_ID,
+         trx1.trx_mysql_thread_id as blocking_mysql_ID,
+            trx1.trx_query AS blocking_command,
+            lo.lock_index AS lock_index
+        FROM
+            information_schema.innodb_lock_waits lw
+        INNER JOIN information_schema.innodb_locks lo ON lw.requesting_trx_id = lo.lock_trx_id
+        INNER JOIN information_schema.innodb_locks lo1 ON lw.blocking_trx_id = lo1.lock_trx_id
+        INNER JOIN information_schema.innodb_trx trx ON lo.lock_trx_id = trx.trx_id
+        INNER JOIN information_schema.innodb_trx trx1 ON lo1.lock_trx_id = trx1.trx_id;"`
+        if [[ $result == "" ]]; then
+			echo "there is no lock tables."
+				else
+			echo $result
+		fi
+        ;;
+#慢SQL
+    Slow_queries)
+        result=`${MYSQL_CONN}  2> /dev/null status |cut -f5 -d":"|cut -f1 -d"O"`
+        echo $result
+        ;;
+#TPS
+	TPS)
+	Com_commit=`${MYSQL_CONN}  2> /dev/null extended-status |grep -w "Com_commit"|cut -d"|" -f3`			
+	Com_rollback=`${MYSQL_CONN}  2> /dev/null extended-status |grep -w "Com_rollback"|cut -d"|" -f3`
+	Uptime=`${MYSQL_CONN} status 2> /dev/null|cut -f2 -d":"|cut -f1 -d"T"`	
+		result=$(echo "($Com_rollback" + "$Com_commit)/$Uptime"|bc)
+        echo $result 
+        ;; 
+#QPS
+	QPS)
+		Questions=`${MYSQL_CONN}  2> /dev/null status|cut -f4 -d":"|cut -f1 -d"S"`
+		Uptime=`${MYSQL_CONN} status 2> /dev/null|cut -f2 -d":"|cut -f1 -d"T"`	
+		result=$(echo "$Questions/$Uptime"|bc)
+        echo $result
+        ;;
+#备份状态@从
+	back_status)
+	hostname=`hostname`
+	FULL_BACK_LOG_DIR="/data/backup/$hostname/log"
+	LATEST_LOG=`ls -t ${FULL_BACK_LOG_DIR} | head -n 1`
+	IS_FULL_OK=`cat "${FULL_BACK_LOG_DIR}/${LATEST_LOG}" | grep "completed OK" | tail -n 1`
+	if [[ ${IS_FULL_OK} != "" ]]; then
+	   echo ${IS_FULL_OK}
+	   echo "full back successfully."
+	else
+	   echo "full back failed."
+	fi
+	;;
+esac
