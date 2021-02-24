@@ -1,10 +1,10 @@
 ## Create a DML only user
-CREATE USER 'ecpapps'@'%' IDENTIFIED BY 'Password';
+CREATE USER 'dmluser'@'%' IDENTIFIED BY 'Password';
 grant select, update, delete, insert on *.* to ecpapps@'%';
 flush privileges;
 
 
 ## Create a read only user
-CREATE USER 'ecpread'@'%' IDENTIFIED BY 'Password';
+CREATE USER 'readuser'@'%' IDENTIFIED BY 'Password';
 grant SELECT on *.* to ecpapps@'%';
 flush privileges;
